@@ -35,17 +35,29 @@ def mount_frontend(app: FastAPI, dist_dir: str | None = None) -> bool:
     # 静态资源目录（/assets 等）用 Mount 挂载，不影响 API 路由
     app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="site-assets")
 
+    # index.html 必须每次向服务器校验（no-cache + ETag）：
+    # 否则浏览器启发式缓存旧页面，而构建产物的 JS 名带 hash —— 重建后旧 hash 文件已不存在，
+    # 用户会拿到"引用已删除 JS 的旧 HTML"→ 整页白屏。带 hash 的 /assets 则长缓存（内容变则文件名变）。
+    _INDEX_HEADERS = {"Cache-Control": "no-cache"}
+    _ASSET_HEADERS = {"Cache-Control": "public, max-age=31536000, immutable"}
+
     @app.middleware("http")
     async def spa_fallback(request, call_next):
         path = request.url.path
-        # API / WebSocket / 已挂载的静态目录 → 走正常 FastAPI 路由/挂载
-        if path.startswith(("/api/", "/ws/", "/assets/")) or path == "/api":
+        # API / WebSocket → 走正常 FastAPI 路由
+        if path.startswith(("/api/", "/ws/")) or path == "/api":
             return await call_next(request)
+        # 已挂载的静态资源（带 hash）→ 长缓存
+        if path.startswith("/assets/"):
+            resp = await call_next(request)
+            resp.headers.setdefault("Cache-Control", _ASSET_HEADERS["Cache-Control"])
+            return resp
         # 命中真实文件则直出；否则回退 index.html（SPA）
         relative = path.lstrip("/")
         candidate = static_dir / relative if relative else index_file
         if relative and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(index_file)
+            # 非 hash 命名的根级文件（favicon 等）：短缓存 + 校验
+            return FileResponse(candidate, headers=_INDEX_HEADERS)
+        return FileResponse(index_file, headers=_INDEX_HEADERS)
 
     return True

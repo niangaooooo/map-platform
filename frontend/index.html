@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>协作地图标绘</title>
+    <!-- 高德 JS API Key（前端渲染底图用，需在高德控制台配置域名白名单）
+         构建时由 Vite 注入：在 frontend/.env.local 里设置 VITE_AMAP_KEY / VITE_AMAP_SECURITY_CODE -->
+    <meta name="amap-key" content="%VITE_AMAP_KEY%" />
+    <!-- 高德 JS API 安全密钥（securityJsCode，2.0 必需） -->
+    <meta name="amap-security-code" content="%VITE_AMAP_SECURITY_CODE%" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

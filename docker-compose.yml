@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: map-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-map}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-map_password}
+      POSTGRES_DB: ${POSTGRES_DB:-map_platform}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-map}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: map-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: map-backend
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-map}:${POSTGRES_PASSWORD:-map_password}@postgres:5432/${POSTGRES_DB:-map_platform}
+      REDIS_URL: redis://redis:6379/0
+      AMAP_KEY: ${AMAP_KEY:-}
+      AMAP_SECURITY_CODE: ${AMAP_SECURITY_CODE:-}
+      ALLOW_REGISTER: ${ALLOW_REGISTER:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://map.example.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # 高德 JS API Key：构建时注入前端（必须在高德控制台配置域名白名单）
+        VITE_AMAP_KEY: ${AMAP_KEY:-}
+    container_name: map-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: map-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot-webroot:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: map-certbot
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: /bin/sh
+    command: >
+      -c "trap exit TERM; while :; do sleep 12h & wait $${!};
+      certbot renew --webroot -w /var/www/certbot --quiet; done"
+
+  backup:
+    image: postgres:16-alpine
+    container_name: map-backup
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-map}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backups/backup.sh:ro
+      - pgdata:/pgdata:ro
+    entrypoint: /bin/sh
+    command: /backups/backup.sh
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  certbot-webroot:
+  certbot-certs:

@@ -1,0 +1,20 @@
+[project]
+name = "map-platform-backend"
+version = "1.0.0"
+description = "多用户协作地图标绘系统后端"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "ASYNC"]
+# B008: FastAPI 惯用法（Depends/File/Form 作为默认值），忽略
+# E501: 行长限制由 black/formatter 统一处理
+ignore = ["B008", "E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

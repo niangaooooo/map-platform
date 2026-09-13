@@ -5,8 +5,9 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 # 构建时注入高德 Key（由构建变量传入，避免写入源码）
 ARG VITE_AMAP_KEY=
+ARG VITE_AMAP_SECURITY_CODE=
 ENV VITE_AMAP_KEY=$VITE_AMAP_KEY
-# 兼容运行时注入：也可通过 index.html meta 覆盖
+ENV VITE_AMAP_SECURITY_CODE=$VITE_AMAP_SECURITY_CODE
 RUN npm run build
 
 FROM nginx:1.27-alpine

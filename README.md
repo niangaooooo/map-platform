@@ -80,9 +80,12 @@ AMAP_KEY=你的Key
 AMAP_SECURITY_CODE=你的安全密钥
 ```
 
-3. 前端构建时注入 Key（见下文构建），`index.html` 中的 `<meta name="amap-key">` 用于地图加载。
+3. 前端构建时注入 Key，`index.html` 中保留 `<meta name="amap-key">` 占位，由 Vite 在构建期替换：
+   - **Docker 部署**：把 `AMAP_KEY` / `AMAP_SECURITY_CODE` 写进项目根 `.env`，`docker compose` 会作为构建参数传给前端镜像。
+   - **本地/非 Docker 构建**：复制 `frontend/.env.local.example` 为 `frontend/.env.local` 并填入
+     `VITE_AMAP_KEY` / `VITE_AMAP_SECURITY_CODE`，然后 `npm run build`。
 
-> `AMAP_KEY` / `AMAP_SECURITY_CODE` 属于敏感信息，请只写在 `.env`，**不要提交到 Git**。
+> `AMAP_KEY` / `AMAP_SECURITY_CODE` 属于敏感信息，请只写在 `.env` / `.env.local`（均已被 `.gitignore` 忽略），**不要提交到 Git**。
 > 搜索接口默认走后端代理 `/api/v1/amap-proxy`（需要登录态），密钥不暴露给浏览器。
 
 ---
@@ -100,9 +103,11 @@ cp .env.example .env
 ### 2. 构建并启动
 
 ```bash
-docker compose build --build-arg VITE_AMAP_KEY=$AMAP_KEY frontend
-docker compose up -d
+docker compose up -d --build
 ```
+
+> 前端镜像构建时会自动从根 `.env` 读取 `AMAP_KEY` / `AMAP_SECURITY_CODE` 注入到页面，
+> 因此确保 `.env` 已填好这两个值再执行构建。
 
 ### 3. 初始化数据库
 

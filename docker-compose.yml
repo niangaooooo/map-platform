@@ -55,8 +55,9 @@ services:
     build:
       context: ./frontend
       args:
-        # 高德 JS API Key：构建时注入前端（必须在高德控制台配置域名白名单）
+        # 高德 JS API Key / 安全密钥：构建时注入前端（必须在高德控制台配置域名白名单）
         VITE_AMAP_KEY: ${AMAP_KEY:-}
+        VITE_AMAP_SECURITY_CODE: ${AMAP_SECURITY_CODE:-}
     container_name: map-frontend
     depends_on:
       - backend

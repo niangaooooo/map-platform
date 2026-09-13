@@ -60,16 +60,27 @@ python -m venv .venv
 .venv\Scripts\python -m app.cli create-admin --username admin --email a@b.c --password 你的密码
 ```
 
-### 4. 准备前端（二选一）
+### 4. 构建前端
 
-- **A. 直接用自带的 `frontend\dist`**（压缩包已含高德 Key 注入的构建产物，无需 Node）：跳过本步。
-- B. 如需重新构建：
-  ```bat
-  cd C:\map-platform\frontend
-  npm ci
-  set VITE_AMAP_KEY=你的高德JS_API_Key
-  npm run build
-  ```
+高德 Key 是在**构建时注入**的（`index.html` 里是 `%VITE_AMAP_KEY%` 占位符），所以必须先配置再构建：
+
+```bat
+cd C:\map-platform\frontend
+
+:: 方式一：复制模板为 .env.local 并填写（推荐）
+copy .env.local.example .env.local
+:: 然后编辑 .env.local，填入 VITE_AMAP_KEY / VITE_AMAP_SECURITY_CODE
+
+:: 方式二：用环境变量
+set VITE_AMAP_KEY=你的高德JS_API_Key
+:: set VITE_AMAP_SECURITY_CODE=你的安全密钥
+
+npm ci
+npm run build
+```
+
+> 构建产物在 `frontend\dist`。若后续要改 Key，重新构建即可。
+> 记得去高德控制台把访问域名加入该 Key 的「域名白名单」，否则地图不显示。
 
 ### 5. 启动后端（单端口托管一切）
 

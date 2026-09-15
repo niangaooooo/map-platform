@@ -210,10 +210,11 @@
       </el-tooltip>
       <el-tooltip content="复位"><el-button :icon="Refresh" @click="resetView" /></el-tooltip>
       <el-tooltip content="导入"><el-button :icon="Upload" @click="importDialogRef?.open()" /></el-tooltip>
+      <!-- 注意：这里不能用 el-tooltip 包裹按钮 —— el-dropdown 的直接子元素必须是触发器本身，
+           否则 dropdown 拿不到真正的 DOM trigger，真实鼠标点击无法展开菜单（合成 click 却能触发，
+           极易被误判为"功能正常"）。改用原生 title 提供悬停提示。 -->
       <el-dropdown trigger="click" @command="onExportCommand">
-        <el-tooltip content="导出备份">
-          <el-button :icon="Download" :loading="exporting" />
-        </el-tooltip>
+        <el-button :icon="Download" :loading="exporting" title="导出备份" />
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="backup" icon="Document">完整备份（.json，可完整还原）</el-dropdown-item>
